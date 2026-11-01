@@ -71,51 +71,51 @@ static int cbitsofprecision = RATIO_FOR_DECIMAL * DECIMAL * CALC_DECIMAL_DIGITS_
 
 #endif
 
-bool g_ftrueinfinite = false; // Set to true if you don't want
-                              // chopping internally
-                              // precision used internally
+thread_local bool g_ftrueinfinite = false; // Set to true if you don't want
+                                           // chopping internally
+                                           // precision used internally
 
-PNUMBER num_one = nullptr;
-PNUMBER num_two = nullptr;
-PNUMBER num_five = nullptr;
-PNUMBER num_six = nullptr;
-PNUMBER num_ten = nullptr;
+thread_local PNUMBER num_one = nullptr;
+thread_local PNUMBER num_two = nullptr;
+thread_local PNUMBER num_five = nullptr;
+thread_local PNUMBER num_six = nullptr;
+thread_local PNUMBER num_ten = nullptr;
 
-PRAT ln_ten = nullptr;
-PRAT ln_two = nullptr;
-PRAT rat_zero = nullptr;
-PRAT rat_one = nullptr;
-PRAT rat_neg_one = nullptr;
-PRAT rat_two = nullptr;
-PRAT rat_six = nullptr;
-PRAT rat_half = nullptr;
-PRAT rat_ten = nullptr;
-PRAT pt_eight_five = nullptr;
-PRAT pi = nullptr;
-PRAT pi_over_two = nullptr;
-PRAT two_pi = nullptr;
-PRAT one_pt_five_pi = nullptr;
-PRAT e_to_one_half = nullptr;
-PRAT rat_exp = nullptr;
-PRAT rad_to_deg = nullptr;
-PRAT rad_to_grad = nullptr;
-PRAT rat_qword = nullptr;
-PRAT rat_dword = nullptr; // unsigned max ui32
-PRAT rat_word = nullptr;
-PRAT rat_byte = nullptr;
-PRAT rat_360 = nullptr;
-PRAT rat_400 = nullptr;
-PRAT rat_180 = nullptr;
-PRAT rat_200 = nullptr;
-PRAT rat_nRadix = nullptr;
-PRAT rat_smallest = nullptr;
-PRAT rat_negsmallest = nullptr;
-PRAT rat_max_exp = nullptr;
-PRAT rat_min_exp = nullptr;
-PRAT rat_max_fact = nullptr;
-PRAT rat_min_fact = nullptr;
-PRAT rat_min_i32 = nullptr; // min signed i32
-PRAT rat_max_i32 = nullptr; // max signed i32
+thread_local PRAT ln_ten = nullptr;
+thread_local PRAT ln_two = nullptr;
+thread_local PRAT rat_zero = nullptr;
+thread_local PRAT rat_one = nullptr;
+thread_local PRAT rat_neg_one = nullptr;
+thread_local PRAT rat_two = nullptr;
+thread_local PRAT rat_six = nullptr;
+thread_local PRAT rat_half = nullptr;
+thread_local PRAT rat_ten = nullptr;
+thread_local PRAT pt_eight_five = nullptr;
+thread_local PRAT pi = nullptr;
+thread_local PRAT pi_over_two = nullptr;
+thread_local PRAT two_pi = nullptr;
+thread_local PRAT one_pt_five_pi = nullptr;
+thread_local PRAT e_to_one_half = nullptr;
+thread_local PRAT rat_exp = nullptr;
+thread_local PRAT rad_to_deg = nullptr;
+thread_local PRAT rad_to_grad = nullptr;
+thread_local PRAT rat_qword = nullptr;
+thread_local PRAT rat_dword = nullptr; // unsigned max ui32
+thread_local PRAT rat_word = nullptr;
+thread_local PRAT rat_byte = nullptr;
+thread_local PRAT rat_360 = nullptr;
+thread_local PRAT rat_400 = nullptr;
+thread_local PRAT rat_180 = nullptr;
+thread_local PRAT rat_200 = nullptr;
+thread_local PRAT rat_nRadix = nullptr;
+thread_local PRAT rat_smallest = nullptr;
+thread_local PRAT rat_negsmallest = nullptr;
+thread_local PRAT rat_max_exp = nullptr;
+thread_local PRAT rat_min_exp = nullptr;
+thread_local PRAT rat_max_fact = nullptr;
+thread_local PRAT rat_min_fact = nullptr;
+thread_local PRAT rat_min_i32 = nullptr; // min signed i32
+thread_local PRAT rat_max_i32 = nullptr; // max signed i32
 
 //----------------------------------------------------------------------------
 //
