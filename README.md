@@ -1,9 +1,17 @@
 # BackendMathLibrary
 
+[![Engine MIT](https://img.shields.io/badge/engine-MIT-green)](LICENSE-MIT)
+[![New code MPL-2.0](https://img.shields.io/badge/new%20code-MPL--2.0-orange)](LICENSE-MPL-2.0)
+[![Language C/C++](https://img.shields.io/badge/language-C%2FC%2B%2B-blue)](api/calc_api.h)
+[![Platform Windows x64](https://img.shields.io/badge/platform-Windows%20x64-lightgrey)](dist)
+[![Exports 74](https://img.shields.io/badge/exports-74-blueviolet)](api/calc_api.h)
+
 一个基于 **微软开源计算器 `Microsoft/calculator`（CalcManager 引擎）** 编译而成的 **纯 C 接口数学库**。
 
 动态库（DLL）与静态库（lib）均以标准 C ABI（`extern "C"`）导出，任何支持加载动态库的语言（C/C++、Python ctypes/cffi、Rust、Go、C# 等）都能直接调用。
 
+> **许可（快捷查看）**：引擎源码 [MIT](LICENSE-MIT) ｜ 新增代码 [MPL-2.0](LICENSE-MPL-2.0)
+>
 > **来源与许可**：本仓库为**双重许可**——
 > - 引擎源码 `src/CalcManager/` 源自微软开源仓库
 >   [Microsoft/calculator](https://github.com/Microsoft/calculator)（`CalcManager` 模块），
