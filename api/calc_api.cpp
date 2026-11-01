@@ -1,3 +1,4 @@
+// 本文件为 BackendMathLibrary 自写代码（非 Microsoft/calculator 源码）。
 // calc_api.cpp — C export layer over the CalcManager Ratpack arbitrary-precision core.
 // Compiled as a DLL. Symbols are extern "C" so any language/runtime can call them.
 #include <string>
@@ -8,11 +9,26 @@
 
 using namespace std;
 
-static uint32_t g_radix = 10;
-static int32_t g_precision = 32;
+static thread_local uint32_t g_radix = 10;
+static thread_local int32_t g_precision = 32;
+static thread_local bool g_initialized = false;
+
+// Per-thread lazy init: Ratpak's constants (pi, rat_two, ...) are thread_local,
+// so every thread must run ChangeConstants once before doing math. cm_init just
+// records the radix/precision and lets the next call re-initialize on this thread.
+static void ensure_init()
+{
+    if (!g_initialized)
+    {
+        SetDecimalSeparator(L'.');
+        ChangeConstants(g_radix, g_precision);
+        g_initialized = true;
+    }
+}
 
 static PRAT parse_rat(const wchar_t* s)
 {
+    ensure_init();
     if (!s)
         return nullptr;
     wstring str(s);
@@ -46,8 +62,7 @@ extern "C"
     {
         g_radix = radix;
         g_precision = precision;
-        SetDecimalSeparator(L'.');
-        ChangeConstants(radix, precision);
+        g_initialized = false;
     }
 
     __declspec(dllexport) wchar_t* cm_add(const wchar_t* a, const wchar_t* b)
@@ -279,7 +294,7 @@ extern "C"
         try
         {
             PRAT ra = parse_rat(a);
-            if (!ra) return nullptr;
+            if (!ra || !ra->pp || !ra->pq) return nullptr;
             ra->pp->sign = 1;
             ra->pq->sign = 1;
             return rat_to_str(ra);
