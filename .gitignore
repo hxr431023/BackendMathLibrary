@@ -1,0 +1,8 @@
+# Build artifacts (regenerable, not published)
+build/out/
+*.obj
+*.exe
+*.log
+*.rsp
+*.exp
+*.pdb
