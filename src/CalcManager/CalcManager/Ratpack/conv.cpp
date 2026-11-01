@@ -32,9 +32,9 @@ static constexpr wstring_view DIGITS = L"0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZabc
 
 // ratio of internal 'digits' to output 'digits'
 // Calculated elsewhere as part of initialization and when base is changed
-int32_t g_ratio; // int(log(2L^BASEXPWR)/log(radix))
+thread_local int32_t g_ratio; // int(log(2L^BASEXPWR)/log(radix))
 // Default decimal separator
-wchar_t g_decimalSeparator = L'.';
+thread_local wchar_t g_decimalSeparator = L'.';
 
 // The following defines and Calc_ULong* functions were taken from
 // https://github.com/dotnet/coreclr/blob/8b1595b74c943b33fa794e63e440e6f4c9679478/src/pal/inc/rt/intsafe.h
