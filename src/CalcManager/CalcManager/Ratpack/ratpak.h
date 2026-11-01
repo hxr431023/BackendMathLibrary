@@ -88,47 +88,47 @@ static constexpr uint32_t MAX_LONG_SIZE = 33; // Base 2 requires 32 'digits'
 //
 //-----------------------------------------------------------------------------
 
-extern PNUMBER num_one;
-extern PNUMBER num_two;
-extern PNUMBER num_five;
-extern PNUMBER num_six;
-extern PNUMBER num_ten;
+extern thread_local PNUMBER num_one;
+extern thread_local PNUMBER num_two;
+extern thread_local PNUMBER num_five;
+extern thread_local PNUMBER num_six;
+extern thread_local PNUMBER num_ten;
 
-extern PRAT ln_ten;
-extern PRAT ln_two;
-extern PRAT rat_zero;
-extern PRAT rat_neg_one;
-extern PRAT rat_one;
-extern PRAT rat_two;
-extern PRAT rat_six;
-extern PRAT rat_half;
-extern PRAT rat_ten;
-extern PRAT pt_eight_five;
-extern PRAT pi;
-extern PRAT pi_over_two;
-extern PRAT two_pi;
-extern PRAT one_pt_five_pi;
-extern PRAT e_to_one_half;
-extern PRAT rat_exp;
-extern PRAT rad_to_deg;
-extern PRAT rad_to_grad;
-extern PRAT rat_qword;
-extern PRAT rat_dword;
-extern PRAT rat_word;
-extern PRAT rat_byte;
-extern PRAT rat_360;
-extern PRAT rat_400;
-extern PRAT rat_180;
-extern PRAT rat_200;
-extern PRAT rat_nRadix;
-extern PRAT rat_smallest;
-extern PRAT rat_negsmallest;
-extern PRAT rat_max_exp;
-extern PRAT rat_min_exp;
-extern PRAT rat_max_fact;
-extern PRAT rat_min_fact;
-extern PRAT rat_max_i32;
-extern PRAT rat_min_i32;
+extern thread_local PRAT ln_ten;
+extern thread_local PRAT ln_two;
+extern thread_local PRAT rat_zero;
+extern thread_local PRAT rat_neg_one;
+extern thread_local PRAT rat_one;
+extern thread_local PRAT rat_two;
+extern thread_local PRAT rat_six;
+extern thread_local PRAT rat_half;
+extern thread_local PRAT rat_ten;
+extern thread_local PRAT pt_eight_five;
+extern thread_local PRAT pi;
+extern thread_local PRAT pi_over_two;
+extern thread_local PRAT two_pi;
+extern thread_local PRAT one_pt_five_pi;
+extern thread_local PRAT e_to_one_half;
+extern thread_local PRAT rat_exp;
+extern thread_local PRAT rad_to_deg;
+extern thread_local PRAT rad_to_grad;
+extern thread_local PRAT rat_qword;
+extern thread_local PRAT rat_dword;
+extern thread_local PRAT rat_word;
+extern thread_local PRAT rat_byte;
+extern thread_local PRAT rat_360;
+extern thread_local PRAT rat_400;
+extern thread_local PRAT rat_180;
+extern thread_local PRAT rat_200;
+extern thread_local PRAT rat_nRadix;
+extern thread_local PRAT rat_smallest;
+extern thread_local PRAT rat_negsmallest;
+extern thread_local PRAT rat_max_exp;
+extern thread_local PRAT rat_min_exp;
+extern thread_local PRAT rat_max_fact;
+extern thread_local PRAT rat_min_fact;
+extern thread_local PRAT rat_max_i32;
+extern thread_local PRAT rat_min_i32;
 
 // DUPNUM Duplicates a number taking care of allocation and internals
 #define DUPNUM(a, b)                                                                                                                                           \
@@ -317,11 +317,11 @@ extern PRAT rat_min_i32;
 //
 //-----------------------------------------------------------------------------
 
-extern bool g_ftrueinfinite; // set to true to allow infinite precision
-                             // don't use unless you know what you are doing
-                             // used to help decide when to stop calculating.
+extern thread_local bool g_ftrueinfinite; // set to true to allow infinite precision
+                                          // don't use unless you know what you are doing
+                                          // used to help decide when to stop calculating.
 
-extern int32_t g_ratio; // Internally calculated ratio of internal radix
+extern thread_local int32_t g_ratio; // Internally calculated ratio of internal radix
 
 //-----------------------------------------------------------------------------
 //
