@@ -35,7 +35,7 @@ if (-not $VcVars -or -not (Test-Path -LiteralPath $VcVars)) {
     exit 1
 }
 
-$testNames = @("test_calc", "test_engine", "test_unit", "test_cmp", "test_concurrency")
+$testNames = @("test_calc", "test_engine", "test_unit", "test_cmp", "test_concurrency", "test_settings")
 
 $cmds = @(
     "@echo off"

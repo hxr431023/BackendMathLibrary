@@ -1,3 +1,4 @@
+// 本文件为 BackendMathLibrary 自写代码（非 Microsoft/calculator 源码）。
 // calc_api.h — C interface for CalcManager.dll (arbitrary-precision rational core).
 // Include this header when consuming the DLL. Link against CalcManager_dll.lib.
 #pragma once
@@ -175,6 +176,21 @@ __declspec(dllimport) wchar_t* cm_int(const wchar_t* a);
 
 // Release a string previously returned by any cm_* function.
 __declspec(dllimport) void cm_free(wchar_t* p);
+
+// ---- Runtime settings ----
+// Enable/disable per-call logging (default: disabled). When enabled, every cm_*
+// math call logs its name, arguments and result (to the file set by
+// cm_set_log_file, or to stderr when no file is set). Settings are per-thread:
+// each thread carries its own enabled flag and log destination.
+__declspec(dllimport) void cm_set_log_enabled(int enable);
+// Route per-call log output to a file (wide-char path, opened in append mode).
+// Pass NULL / empty to log to stderr instead. Returns 0. If the file cannot be
+// opened, output falls back to stderr.
+__declspec(dllimport) int cm_set_log_file(const wchar_t* path);
+// Set the output format applied to every cm_* result: radix (CM_RADIX_*),
+// precision (digits), and notation (0 = auto/float, 1 = scientific, 2 =
+// engineering). Constants are re-derived on the next math call on this thread.
+__declspec(dllimport) void cm_set_output_format(unsigned int radix, int precision, int notation);
 
 // ---- Full-engine interface (original CalculatorManager) ----
 // Handles are opaque; create with cm_engine_new, release with cm_engine_free.
