@@ -34,7 +34,7 @@ BackendMathLibrary/
     └── CalcManager_dll.lib
 ```
 
-## 接口概览（77 个导出）
+## 接口概览（78 个导出）
 
 - **计算引擎**：科学/程序员模式，运算**按运算符优先级**（`2+3*4=14`）。
 - **数学函数**：`cm_sin/cm_cos/...`（弧度制）+ `cm_sin_deg/...`（度数制）。
@@ -42,8 +42,9 @@ BackendMathLibrary/
 - **比较专区**：`cm_cmp_compare`（无单位）/ `cm_cmp_compare_units`（带单位，统一到首项单位后比较），
   输入输出均为宽字符串数组，每项 `"key=value"`。
 - **运行时设置**：
-  - `cm_set_log_enabled(enable)` + `cm_set_log_file(path)`：启用后**每次 `cm_*` 调用**都把
-    函数名、参数与结果写入日志文件（未设文件时写 `stderr`；`path` 传 `NULL` 回到 stderr）；
+  - `cm_log_start(logDllPath, baseDir)` + `cm_log_stop()`：动态加载外部 `log.dll`（GraalVM native-image C ABI DLL），
+    库自建 isolate 并初始化日志；`cm_set_log_enabled(enable)` 控制每次 `cm_*` 调用是否记录函数名/参数/结果。
+    未调 `cm_log_start` 或 log.dll 缺失时，日志静默禁用，数学调用不受影响。
   - `cm_set_output_format(radix, precision, notation)`：统一设置所有结果的**进制**
     （`CM_RADIX_*`）、**精度**（有效位数）与**表示法**（`0`=自动/普通、`1`=科学计数、`2`=工程计数）。
 
@@ -60,12 +61,13 @@ cm_init(10, 32);
 wchar_t* r = cm_pow(L"2", L"100");   // 1267650600228229401496703205376
 cm_free(r);
 
-// 运行时设置：日志（每次 cm_* 调用写入文件）
-cm_set_log_file(L"calc.log");
+// 运行时设置：日志（动态加载外部 log.dll）
+cm_log_start("C:/path/to/log.dll", "C:/app/logdata");  // 加载并初始化
 cm_set_log_enabled(1);
-wchar_t* r2 = cm_add(L"2", L"3");    // 日志追加: [cm] cm_add(2, 3) = 5
+wchar_t* r2 = cm_add(L"2", L"3");    // log.dll 记录: cm_add(2, 3) = 5
 cm_free(r2);
 cm_set_log_enabled(0);               // 关闭后不再记录
+cm_log_stop();                       // 关闭日志（压缩归档）
 
 // 运行时设置：输出格式（十六进制 / 科学计数等）
 cm_set_output_format(16, 8, 0);      // 十六进制、8 位有效数字、普通表示
@@ -92,7 +94,8 @@ cm_cmp_free(c);
   `g_ftrueinfinite`）与封装的 `radix / precision` 均声明为 **`thread_local`**，线程间互不干扰；
   数学接口返回的字符串在堆上分配、由调用方释放，不共享可变全局缓冲。
   因此**可同时开多个线程并行**调用数学 `cm_*` 函数而无需加锁（已附 8 线程并发冒烟测试验证）。
-  日志开关 / 日志路径 / 输出格式（notation）同样为 `thread_local`，各线程可独立配置互不干扰。
+  输出格式（radix / precision / notation）为 `thread_local`，各线程可独立配置互不干扰。
+  日志开关（`cm_set_log_enabled`）为全局设置，所有线程共享。
   `cm_engine_*`、`cm_unit_*`、`cm_cmp_*` 各自持有句柄（每实例独立状态），同一实例勿在多个线程中并发使用。
 - **单位换算精度**：`cm_unit_convert` 与比较专区使用 **`double` 精度**（非任意精度）；
   极小的非零数值不会被抹零，比较判等采用容差（1e-9）。引擎算术运算本身为任意精度。

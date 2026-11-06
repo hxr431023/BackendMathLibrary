@@ -95,7 +95,7 @@
 #define CM_CMD_CSC     402
 #define CM_CMD_ACSC    403
 #define CM_CMD_COT     404
-#define CM_CMD_ACOT    405
+#define CM_CMD_ACOT     405
 #define CM_CMD_SECH    406
 #define CM_CMD_ASECH   407
 #define CM_CMD_CSCH    408
@@ -177,16 +177,20 @@ __declspec(dllimport) wchar_t* cm_int(const wchar_t* a);
 // Release a string previously returned by any cm_* function.
 __declspec(dllimport) void cm_free(wchar_t* p);
 
-// ---- Runtime settings ----
-// Enable/disable per-call logging (default: disabled). When enabled, every cm_*
-// math call logs its name, arguments and result (to the file set by
-// cm_set_log_file, or to stderr when no file is set). Settings are per-thread:
-// each thread carries its own enabled flag and log destination.
+// ---- Runtime logging (delegated to external log.dll) ----
+// Start logging by dynamically loading log.dll (GraalVM native-image), creating an
+// isolate, and calling log_init(baseDir). logDllPath is an ANSI path to log.dll
+// (e.g. "C:/wpjc/md/native/DLL/core/log.dll"); baseDir is the data dir log.dll
+// will create log/ and cache/log/ under. Returns 0 on success, -1 on failure
+// (missing DLL, bad isolate, etc). If logging is not started, math calls still work.
+__declspec(dllimport) int cm_log_start(const char* logDllPath, const char* baseDir);
+// Stop logging: log_shutdown (compress .zst) + tear down isolate + FreeLibrary.
+// Safe to call when logging was never started.
+__declspec(dllimport) void cm_log_stop(void);
+// Enable/disable per-call autologging (default: off, process-wide). When on,
+// every cm_* math call writes one line through the loaded log.dll.
+// Must call cm_log_start first, otherwise this is a no-op.
 __declspec(dllimport) void cm_set_log_enabled(int enable);
-// Route per-call log output to a file (wide-char path, opened in append mode).
-// Pass NULL / empty to log to stderr instead. Returns 0. If the file cannot be
-// opened, output falls back to stderr.
-__declspec(dllimport) int cm_set_log_file(const wchar_t* path);
 // Set the output format applied to every cm_* result: radix (CM_RADIX_*),
 // precision (digits), and notation (0 = auto/float, 1 = scientific, 2 =
 // engineering). Constants are re-derived on the next math call on this thread.
