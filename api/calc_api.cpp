@@ -1,9 +1,16 @@
 // 本文件为 BackendMathLibrary 自写代码（非 Microsoft/calculator 源码）。
 // calc_api.cpp — C export layer over the CalcManager Ratpack arbitrary-precision core.
 // Compiled as a DLL. Symbols are extern "C" so any language/runtime can call them.
+//
+// Logging: instead of writing log files ourselves, we dynamically load the
+// user-provided GraalVM-native-image log.dll (see C:\wpjc\md\native\DLL\core\).
+// The library creates its own GraalVM isolate and calls log_init/log_write/log_shutdown.
+// If log.dll is missing, logging is silently disabled and math calls still work.
+#include <windows.h>
 #include <string>
 #include <cwchar>
 #include <cstdio>
+#include <cstdlib>
 #include <specstrings.h>
 #include "Ratpack/ratpak.h"
 #include "Ratpack/CalcErr.h"
@@ -15,14 +22,70 @@ static thread_local int32_t g_precision = 32;
 static thread_local bool g_initialized = false;
 static thread_local int g_notation = 0; // 0=Float(auto) 1=Scientific 2=Engineering
 
-// Per-call logging state (thread_local so concurrent threads never share a cursor).
-static thread_local bool g_log_enabled = false;
-static thread_local wstring g_log_path;   // empty -> stderr
-static thread_local FILE* g_log_file = nullptr; // lazily opened handle (append)
+// ---- Runtime logging via external log.dll (GraalVM native-image) ----
+typedef int  (*pfn_graal_create_isolate)(void* params, void** isolate, void** thread);
+typedef int  (*pfn_graal_detach_all)(void* thread);
+typedef void* (*pfn_graal_get_current_thread)(void* isolate);
+typedef int  (*pfn_log_init)(void* thread, char* baseDir);
+typedef void (*pfn_log_write)(void* thread, char* params, char* op, char* result);
+typedef void (*pfn_log_shutdown)(void* thread);
+typedef void (*pfn_log_set_enabled)(void* thread, char* cat, int enabled);
+
+static HMODULE g_log_dll = nullptr;
+static void*  g_isolate = nullptr;
+static pfn_graal_create_isolate     g_create_isolate_fn = nullptr;
+static pfn_graal_detach_all         g_detach_all_fn = nullptr;
+static pfn_graal_get_current_thread g_get_thread_fn = nullptr;
+static pfn_log_init                 g_log_init_fn = nullptr;
+static pfn_log_write                g_log_write_fn = nullptr;
+static pfn_log_shutdown             g_log_shutdown_fn = nullptr;
+static pfn_log_set_enabled         g_log_set_enabled_fn = nullptr;
+
+// Process-wide autolog switch: when on, every cm_* math call writes one log line.
+static bool g_autolog = false;
+
+// wide -> UTF-8, returned buffer must be deleted[] by caller. Never returns null.
+static char* w2u(const wchar_t* w)
+{
+    if (!w)
+    {
+        char* e = new char[1]; e[0] = 0; return e;
+    }
+    int n = WideCharToMultiByte(CP_UTF8, 0, w, -1, nullptr, 0, nullptr, nullptr);
+    char* buf = new char[n];
+    WideCharToMultiByte(CP_UTF8, 0, w, -1, buf, n, nullptr, nullptr);
+    return buf;
+}
+
+static void cm_log2(const wchar_t* fn, const wchar_t* a, const wchar_t* b, const wchar_t* r)
+{
+    if (!g_autolog || !g_log_write_fn || !g_isolate || !g_get_thread_fn) return;
+    void* th = g_get_thread_fn(g_isolate);
+    if (!th) return;
+    char* cf = w2u(fn);
+    char* ca = w2u(a ? a : L"<null>");
+    char* cb = w2u(b ? b : L"<null>");
+    char crbuf[4096];
+    _snprintf(crbuf, sizeof(crbuf), "%s, %s", ca, cb);
+    char* cr = w2u(r ? r : L"<err>");
+    g_log_write_fn(th, crbuf, cf, cr);
+    delete[] cf; delete[] ca; delete[] cb; delete[] cr;
+}
+
+static void cm_log1(const wchar_t* fn, const wchar_t* a, const wchar_t* r)
+{
+    if (!g_autolog || !g_log_write_fn || !g_isolate || !g_get_thread_fn) return;
+    void* th = g_get_thread_fn(g_isolate);
+    if (!th) return;
+    char* cf = w2u(fn);
+    char* ca = w2u(a ? a : L"<null>");
+    char* cr = w2u(r ? r : L"<err>");
+    g_log_write_fn(th, ca, cf, cr);
+    delete[] cf; delete[] ca; delete[] cr;
+}
 
 // Per-thread lazy init: Ratpak's constants (pi, rat_two, ...) are thread_local,
-// so every thread must run ChangeConstants once before doing math. cm_init just
-// records the radix/precision and lets the next call re-initialize on this thread.
+// so every thread must run ChangeConstants once before doing math.
 static void ensure_init()
 {
     if (!g_initialized)
@@ -70,31 +133,6 @@ static wchar_t* rat_to_str(PRAT rat)
     return out;
 }
 
-// ---- logging helpers ----
-static FILE* log_stream()
-{
-    if (g_log_file) return g_log_file;
-    if (g_log_path.empty()) return stderr;
-    g_log_file = _wfopen(g_log_path.c_str(), L"a, ccs=UTF-8");
-    return g_log_file ? g_log_file : stderr;
-}
-
-static void cm_log2(const wchar_t* fn, const wchar_t* a, const wchar_t* b, const wchar_t* r)
-{
-    if (!g_log_enabled) return;
-    FILE* f = log_stream();
-    fwprintf(f, L"[cm] %ls(%ls, %ls) = %ls\n", fn, a ? a : L"<null>", b ? b : L"<null>", r ? r : L"<err>");
-    fflush(f);
-}
-
-static void cm_log1(const wchar_t* fn, const wchar_t* a, const wchar_t* r)
-{
-    if (!g_log_enabled) return;
-    FILE* f = log_stream();
-    fwprintf(f, L"[cm] %ls(%ls) = %ls\n", fn, a ? a : L"<null>", r ? r : L"<err>");
-    fflush(f);
-}
-
 extern "C"
 {
     __declspec(dllexport) void cm_init(uint32_t radix, int32_t precision)
@@ -102,6 +140,62 @@ extern "C"
         g_radix = radix;
         g_precision = precision;
         g_initialized = false;
+    }
+
+    // ---- External log.dll lifecycle ----
+    // Load log.dll from logDllPath, create a GraalVM isolate, and call log_init(baseDir).
+    // baseDir is an ANSI/UTF-8 path (e.g. "C:/app/data"). Returns 0 on success, -1 on failure.
+    __declspec(dllexport) int cm_log_start(const char* logDllPath, const char* baseDir)
+    {
+        if (g_log_dll) return 0;
+        HMODULE dll = LoadLibraryA(logDllPath ? logDllPath : "log.dll");
+        if (!dll) return -1;
+        g_create_isolate_fn = (pfn_graal_create_isolate)GetProcAddress(dll, "graal_create_isolate");
+        g_detach_all_fn     = (pfn_graal_detach_all)GetProcAddress(dll, "graal_detach_all_threads_and_tear_down_isolate");
+        g_get_thread_fn     = (pfn_graal_get_current_thread)GetProcAddress(dll, "graal_get_current_thread");
+        g_log_init_fn       = (pfn_log_init)GetProcAddress(dll, "log_init");
+        g_log_write_fn      = (pfn_log_write)GetProcAddress(dll, "log_write");
+        g_log_shutdown_fn   = (pfn_log_shutdown)GetProcAddress(dll, "log_shutdown");
+        g_log_set_enabled_fn = (pfn_log_set_enabled)GetProcAddress(dll, "log_set_enabled");
+        if (!g_create_isolate_fn || !g_log_init_fn || !g_log_write_fn || !g_log_shutdown_fn)
+        {
+            FreeLibrary(dll);
+            return -1;
+        }
+        void* mainThread = nullptr;
+        if (g_create_isolate_fn(nullptr, &g_isolate, &mainThread) != 0 || !g_isolate)
+        {
+            FreeLibrary(dll);
+            g_isolate = nullptr;
+            return -1;
+        }
+        if (g_log_init_fn(mainThread, (char*)baseDir) != 0)
+        {
+            FreeLibrary(dll);
+            g_isolate = nullptr;
+            return -1;
+        }
+        g_log_dll = dll;
+        return 0;
+    }
+
+    // log_shutdown (compresses .zst) + tear down isolate + FreeLibrary. Safe to call when not started.
+    __declspec(dllexport) void cm_log_stop()
+    {
+        if (!g_log_dll) return;
+        void* th = g_get_thread_fn ? g_get_thread_fn(g_isolate) : nullptr;
+        if (th && g_log_shutdown_fn) g_log_shutdown_fn(th);
+        if (th && g_detach_all_fn) g_detach_all_fn(th);
+        FreeLibrary(g_log_dll);
+        g_log_dll = nullptr;
+        g_isolate = nullptr;
+    }
+
+    // Enable/disable per-call autologging (default off). When on, every cm_* math
+    // call writes one line through the loaded log.dll. Settings are process-wide.
+    __declspec(dllexport) void cm_set_log_enabled(int enable)
+    {
+        g_autolog = (enable != 0);
     }
 
     __declspec(dllexport) wchar_t* cm_add(const wchar_t* a, const wchar_t* b)
@@ -315,34 +409,11 @@ extern "C"
         delete[] p;
     }
 
-    __declspec(dllexport) void cm_set_log_enabled(int enable)
-    {
-        g_log_enabled = (enable != 0);
-    }
-
-    __declspec(dllexport) int cm_set_log_file(const wchar_t* path)
-    {
-        if (g_log_file)
-        {
-            fclose(g_log_file);
-            g_log_file = nullptr;
-        }
-        if (path && path[0])
-        {
-            g_log_path = path;
-        }
-        else
-        {
-            g_log_path.clear();
-        }
-        return 0;
-    }
-
     __declspec(dllexport) void cm_set_output_format(uint32_t radix, int32_t precision, int notation)
     {
         g_radix = radix;
         g_precision = precision;
         g_notation = (notation < 0 ? 0 : (notation > 2 ? 2 : notation));
-        g_initialized = false; // constants re-derived on the next math call on this thread
+        g_initialized = false;
     }
 }
