@@ -28,10 +28,7 @@ BackendMathLibrary/
 │   └── calc_cmp.cpp         # 比较专区（数组输入/输出）
 ├── tests/                   # 功能验证（test_calc / test_engine / test_unit / test_cmp / test_concurrency / test_settings）
 ├── build/                   # 构建脚本（MSVC 命令行）
-└── dist/                    # 编译产物
-    ├── CalcManager.dll
-    ├── CalcManager.lib
-    └── CalcManager_dll.lib
+└── dist/                    # 本地编译输出（不入库，产物随 Release 分发）
 ```
 
 ## 接口概览（78 个导出）
@@ -115,4 +112,6 @@ cm_cmp_free(c);
 2. `build_dll_calcmgr.ps1`：把 4 个封装源链接 `CalcManager.lib` 为 `build/out/CalcManager.dll`
 3. `build_tests_calcmgr.ps1`：编译并运行 `tests/` 下的断言测试（非零退出码表示失败）
 
-`dist/` 已提供编译好的 64 位产物，可直接使用。
+## 下载
+
+预编译的 64 位产物（DLL + import library）随每个 [Release](https://github.com/hxr431023/BackendMathLibrary/releases) 发布，作为 Release 附件提供。Release 同时附带 GitHub 自动生成的源码 zip/tar.gz。
