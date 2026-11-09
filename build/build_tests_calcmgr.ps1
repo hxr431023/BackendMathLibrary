@@ -35,7 +35,7 @@ if (-not $VcVars -or -not (Test-Path -LiteralPath $VcVars)) {
     exit 1
 }
 
-$testNames = @("test_calc", "test_engine", "test_unit", "test_cmp", "test_concurrency", "test_settings")
+$testNames = @("test_calc", "test_engine", "test_unit", "test_cmp", "test_concurrency", "test_settings", "test_native")
 
 $cmds = @(
     "@echo off"
@@ -48,7 +48,11 @@ foreach ($t in $testNames) {
     $cmds += "cl /nologo /O2 /EHsc /std:c++20 /permissive- /utf-8 /DUNICODE /D_UNICODE /I`"$eng`" /I`"$eng\Header Files`" /I`"$eng\Ratpack`" /I`"$api`" /I`"$tests`" /Fe:`"$out\$t.exe`" `"$tests\$t.cpp`" /link /LIBPATH:`"$out`" CalcManager_dll.lib"
     $cmds += "if errorlevel 1 exit /b 1"
     $cmds += "`"$out\$t.exe`" > `"$out\$t`_run.log`" 2>&1"
-    $cmds += "if errorlevel 1 (echo $t FAILED) else (echo $t PASSED)"
+    # Compare the raw exit code as text: a crash code such as 0xC0000005 is
+    # negative, and "if errorlevel 1" treats a negative value as success, which
+    # hid a crashing test behind a PASSED line.
+    $cmds += "set RC=%ERRORLEVEL%"
+    $cmds += "if not `"%RC%`"==`"0`" (echo $t FAILED rc=%RC%) else (echo $t PASSED)"
 }
 $cmds += "echo BUILD_TESTS_DONE"
 $bat = ($cmds -join "`r`n")

@@ -1,0 +1,25 @@
+LERF.utf8
+BackendMathLibrary.V0.4.0
+0
+<library.name>后端数学库<library.name>
+<library.description>带 C 接口的任意精度有理数数学核心<library.description>
+<msg.ok>成功<msg.ok>
+<msg.cache_hit>命中缓存：直接复用已有结果<msg.cache_hit>
+<msg.cache_miss>未命中缓存：本次计算结果<msg.cache_miss>
+<msg.domain_error>数值超出该函数的定义域<msg.domain_error>
+<msg.result_too_large>结果超出支持的精度范围<msg.result_too_large>
+<error.invalid_number>数字格式无效<error.invalid_number>
+<error.divide_by_zero>除数不能为零<error.divide_by_zero>
+<error.out_of_memory>内存不足<error.out_of_memory>
+<error.unknown_unit>未知单位<error.unknown_unit>
+<error.invalid_unit_value>单位数值不是有效数字<error.invalid_unit_value>
+<error.compare_failed>比较未产生结果<error.compare_failed>
+<error.engine_not_initialized>引擎尚未初始化<error.engine_not_initialized>
+<settings.language>语言<settings.language>
+<settings.radix>进制<settings.radix>
+<settings.precision>精度<settings.precision>
+<settings.log_enabled>启用日志<settings.log_enabled>
+<settings.output_format>输出格式<settings.output_format>
+<settings.language.english>英文<settings.language.english>
+<settings.language.chinese>中文<settings.language.chinese>
+<status.release>发布版 V0.4（预发行）<status.release>

@@ -1,8 +1,12 @@
 # Build artifacts (regenerable, not published)
 build/out/
+dist/
 *.obj
 *.exe
 *.log
 *.rsp
 *.exp
 *.pdb
+
+# Settings file written by config.dll at runtime — machine state, not source
+resources/cmd/settings.tmmf

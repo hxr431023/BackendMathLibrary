@@ -95,7 +95,7 @@
 #define CM_CMD_CSC     402
 #define CM_CMD_ACSC    403
 #define CM_CMD_COT     404
-#define CM_CMD_ACOT     405
+#define CM_CMD_ACOT    405
 #define CM_CMD_SECH    406
 #define CM_CMD_ASECH   407
 #define CM_CMD_CSCH    408
@@ -177,25 +177,6 @@ __declspec(dllimport) wchar_t* cm_int(const wchar_t* a);
 // Release a string previously returned by any cm_* function.
 __declspec(dllimport) void cm_free(wchar_t* p);
 
-// ---- Runtime logging (delegated to external log.dll) ----
-// Start logging by dynamically loading log.dll (GraalVM native-image), creating an
-// isolate, and calling log_init(baseDir). logDllPath is an ANSI path to log.dll
-// (e.g. "C:/wpjc/md/native/DLL/core/log.dll"); baseDir is the data dir log.dll
-// will create log/ and cache/log/ under. Returns 0 on success, -1 on failure
-// (missing DLL, bad isolate, etc). If logging is not started, math calls still work.
-__declspec(dllimport) int cm_log_start(const char* logDllPath, const char* baseDir);
-// Stop logging: log_shutdown (compress .zst) + tear down isolate + FreeLibrary.
-// Safe to call when logging was never started.
-__declspec(dllimport) void cm_log_stop(void);
-// Enable/disable per-call autologging (default: off, process-wide). When on,
-// every cm_* math call writes one line through the loaded log.dll.
-// Must call cm_log_start first, otherwise this is a no-op.
-__declspec(dllimport) void cm_set_log_enabled(int enable);
-// Set the output format applied to every cm_* result: radix (CM_RADIX_*),
-// precision (digits), and notation (0 = auto/float, 1 = scientific, 2 =
-// engineering). Constants are re-derived on the next math call on this thread.
-__declspec(dllimport) void cm_set_output_format(unsigned int radix, int precision, int notation);
-
 // ---- Full-engine interface (original CalculatorManager) ----
 // Handles are opaque; create with cm_engine_new, release with cm_engine_free.
 __declspec(dllimport) void* cm_engine_new(void);
@@ -266,6 +247,46 @@ __declspec(dllimport) int cm_cmp_compare(void* h, const wchar_t** inputs, int n)
 __declspec(dllimport) int cm_cmp_compare_units(void* h, const wchar_t** inputs, int n);
 // Result items of the last comparison (valid until the next compare call).
 __declspec(dllimport) const wchar_t* cm_cmp_item(void* h, int idx);
+
+// ---- Settings (TMMF) & language (LERF) ----
+// Native dependencies (log.dll, config.dll, tmmf.dll, lerf.dll) are loaded from the
+// directory that contains CalcManager.dll — no absolute paths are used.
+// Call once before any other call; safe to call repeatedly.
+// Returns 1 when config.dll is usable, 0 when it is absent (everything degrades to
+// a no-op, the arithmetic API keeps working).
+__declspec(dllimport) int cm_native_init(void);
+
+// Runtime output settings: radix (2/8/10/16), precision (digits) and notation
+// (0 = plain, 1 = scientific). Applies to the calling thread and is persisted in
+// the TMMF settings file.
+__declspec(dllimport) void cm_set_output_format(unsigned int radix, int precision, int scientific);
+
+// Logging: cm_log_start loads log.dll from the module directory, cm_log_stop
+// flushes it, cm_set_log_enabled turns recording on/off (the cache still works).
+__declspec(dllimport) int cm_log_start(void);
+__declspec(dllimport) void cm_log_stop(void);
+__declspec(dllimport) void cm_set_log_enabled(int enable);
+
+// Directory CalcManager.dll was loaded from (UTF-8, do not free).
+__declspec(dllimport) const char* cm_module_dir(void);
+
+// Settings are persisted by config.dll as TMMF (key=value). cm_settings_get writes
+// the value into out and returns a status code (non-negative on success, negative
+// when config.dll is unavailable). Read the value from out, never from the return.
+// cm_settings_set only changes memory; call cm_settings_save to write the file.
+__declspec(dllimport) int cm_settings_get(const char* key, char* out, int size);
+__declspec(dllimport) int cm_settings_set(const char* key, const char* value);
+__declspec(dllimport) int cm_settings_save(void);
+
+// Switch the language table between "en" and "zh" (resources\cmd\<lang>.lerf)
+// and persist it through config.dll.
+__declspec(dllimport) int cm_set_language(const char* lang);
+__declspec(dllimport) const char* cm_get_language(void);
+
+// Localized message by id, UTF-8 / wide. Falls back to the id itself when the
+// table has no such entry; the returned pointer is valid until the next call.
+__declspec(dllimport) const char* cm_msg(const char* id);
+__declspec(dllimport) const wchar_t* cm_msg_w(const char* id);
 
 #ifdef __cplusplus
 }

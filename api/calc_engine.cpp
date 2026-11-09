@@ -1,3 +1,4 @@
+// 本文件为 BackendMathLibrary 自写代码（非 Microsoft/calculator 源码）。
 // calc_engine.cpp — Full-engine C wrapper over the original CalculatorManager (CEngine command model).
 // Implements the ICalcDisplay + IResourceProvider callbacks and exposes every public
 // CalculatorManager API as a plain extern "C" function. Consumers pass an engine handle.

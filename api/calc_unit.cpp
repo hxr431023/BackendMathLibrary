@@ -1,3 +1,4 @@
+// 本文件为 BackendMathLibrary 自写代码（非 Microsoft/calculator 源码）。
 // calc_unit.cpp — Unit converter C wrapper over the original UnitConverter engine.
 // The original unit data (UnitConverterDataConstants.h) is a generated artifact not present in
 // the repo, so this file supplies a built-in set of common units. Each unit is modelled linearly
@@ -280,7 +281,11 @@ extern "C"
             if (fromIdx < 0 || fromIdx >= (int)cat.units.size() || toIdx < 0 || toIdx >= (int)cat.units.size()) return L"";
             const auto& fu = cat.units[fromIdx];
             const auto& tu = cat.units[toIdx];
-            double v = wcstod(value, nullptr);
+            wchar_t* end = nullptr;
+            double v = wcstod(value, &end);
+            if (end == value) return L"";            // no digits parsed
+            while (*end == L' ' || *end == L'\t') ++end;
+            if (*end != L'\0') return L"";           // trailing junk after number
             double out = v * (fu.a / tu.a) + ((fu.b - tu.b) / tu.a);
             wchar_t buf[64];
             swprintf(buf, 64, L"%.12g", out);

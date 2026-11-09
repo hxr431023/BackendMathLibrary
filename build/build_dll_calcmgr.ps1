@@ -42,6 +42,8 @@ $rsp = @"
 /I"$eng\Ratpack"
 /I"$api"
 "$api\calc_api.cpp"
+"$api\calc_native.cpp"
+"$api\calc_log.cpp"
 "$api\calc_engine.cpp"
 "$api\calc_unit.cpp"
 "$api\calc_cmp.cpp"
@@ -68,3 +70,19 @@ Write-Output ("dll rsp: " + $rspPath)
 Write-Output ("vcvars: " + $VcVars)
 & cmd.exe /c "`"$batPath`""
 Write-Output ("BAT_EXIT: " + $LASTEXITCODE)
+
+# Ship the runtime next to the DLL: dependencies plus the LERF language files.
+# The DLL loads them from its own directory only, so they have to sit beside it.
+if (Test-Path -LiteralPath "$out\CalcManager.dll") {
+    foreach ($dep in @("log.dll","config.dll","tmmf.dll","lerf.dll")) {
+        if (Test-Path -LiteralPath "$root\$dep") { Copy-Item -LiteralPath "$root\$dep" -Destination "$out\$dep" -Force }
+    }
+    $res = Join-Path $root "resources\cmd"
+    if (Test-Path -LiteralPath $res) {
+        $dst = Join-Path $out "resources\cmd"
+        if (-not (Test-Path -LiteralPath $dst)) { New-Item -ItemType Directory -Path $dst -Force | Out-Null }
+        Copy-Item -LiteralPath (Join-Path $res "en.lerf") -Destination $dst -Force -ErrorAction SilentlyContinue
+        Copy-Item -LiteralPath (Join-Path $res "zh.lerf") -Destination $dst -Force -ErrorAction SilentlyContinue
+    }
+    Write-Output "runtime copied to build\out"
+}

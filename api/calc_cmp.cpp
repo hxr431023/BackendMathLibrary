@@ -1,3 +1,4 @@
+// 本文件为 BackendMathLibrary 自写代码（非 Microsoft/calculator 源码）。
 // calc_cmp.cpp — Comparison zone (pure C, array-in / array-out).
 //
 // Input and output are both lists (arrays) of wide strings.
@@ -22,8 +23,6 @@ extern "C"
     __declspec(dllexport) void cm_unit_set_category(void* h, int idx);
     __declspec(dllexport) int cm_unit_unit_count(void* h);
     __declspec(dllexport) const wchar_t* cm_unit_unit_abbrev(void* h, int idx);
-    __declspec(dllexport) void cm_unit_set_units(void* h, int fromIdx, int toIdx);
-    __declspec(dllexport) void cm_unit_switch_active(void* h, const wchar_t* value);
     __declspec(dllexport) const wchar_t* cm_unit_convert(void* h, int catIdx, int fromIdx, int toIdx, const wchar_t* value);
 }
 
@@ -196,7 +195,6 @@ extern "C"
                     const wchar_t* conv = cm_unit_convert(u, p[0].cat, p[i].unit, p[0].unit, p[i].valueStr.c_str());
                     val = conv ? wcstod(conv, nullptr) : 0.0;
                 }
-                if (fabs(val) < 1e-9) val = 0.0; // wipe floating-point noise near zero
                 v[i] = val;
             }
 

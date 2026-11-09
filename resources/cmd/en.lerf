@@ -1,0 +1,25 @@
+LERF.utf8
+BackendMathLibrary.V0.4.0
+0
+<library.name>BackendMathLibrary<library.name>
+<library.description>Arbitrary-precision rational math core with a C API<library.description>
+<msg.ok>OK<msg.ok>
+<msg.cache_hit>Cache hit: the result was reused<msg.cache_hit>
+<msg.cache_miss>Cache miss: the result was computed<msg.cache_miss>
+<msg.domain_error>The value is outside the domain of this function<msg.domain_error>
+<msg.result_too_large>The result exceeds the supported precision<msg.result_too_large>
+<error.invalid_number>Invalid number literal<error.invalid_number>
+<error.divide_by_zero>Division by zero<error.divide_by_zero>
+<error.out_of_memory>Out of memory<error.out_of_memory>
+<error.unknown_unit>Unknown unit<error.unknown_unit>
+<error.invalid_unit_value>The unit value is not a number<error.invalid_unit_value>
+<error.compare_failed>The comparison produced no result<error.compare_failed>
+<error.engine_not_initialized>The engine was not initialized<error.engine_not_initialized>
+<settings.language>Language<settings.language>
+<settings.radix>Radix<settings.radix>
+<settings.precision>Precision<settings.precision>
+<settings.log_enabled>Enable logging<settings.log_enabled>
+<settings.output_format>Output format<settings.output_format>
+<settings.language.english>English<settings.language.english>
+<settings.language.chinese>Chinese<settings.language.chinese>
+<status.release>Release V0.4 (prerelease)<status.release>
