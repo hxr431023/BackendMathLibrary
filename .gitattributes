@@ -1,0 +1,6 @@
+# LERF language files are consumed byte-for-byte by the format library.
+*.lerf -text
+# Binary runtime dependencies
+*.dll binary
+*.lib binary
+*.exp binary
