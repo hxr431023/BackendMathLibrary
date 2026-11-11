@@ -32,6 +32,33 @@
 - 因此：下载者把 `CalcManager.dll` 与这 4 个 DLL、`resources\` 放在**同一个目录**，即可直接使用。
 - 依赖 DLL 缺失时不会导致加载失败，相关能力静默降级为 no-op，数学接口照常工作。
 
+## 可复用原生层（v0.5）
+
+`api/native_runtime.h` + `api/native_runtime.cpp` 是与计算无关的通用层，**可以整对复制到其他项目**，
+无需任何修改即可使用：里面没有一个绝对路径，所有依赖都在运行时按模块自身目录解析。
+
+| 职责 | 接口 |
+| --- | --- |
+| 模块目录解析（`GetModuleHandleExW` + `GetModuleFileNameW`，只算一次） | `module_dir()` / `module_path(leaf)` |
+| 从模块目录加载依赖 DLL | `load_beside(name)`（缺失返回 `nullptr`，静默降级） |
+| TMMF 设置（config.dll：isolate + init + load + get/set/save） | `settings_init()` / `settings_ready()` / `settings_get` / `settings_set` / `settings_save` |
+| LERF 语言文件解析（`<id>text<id>` 与 `key=value`，缺语言回落英文） | `parse_lerf_file()` / `load_lerf_table()` / `lerf_lookup()` |
+| UTF-8 ↔ 宽字符 | `utf8_from_wide()` / `wide_from_utf8()` |
+
+`calc_native.cpp` 现在只做三件事：导出 `cm_*`、保存当前语言与消息表、包装日志开关。
+`calc_store_setting` / `calc_store_settings_save` / `calc_module_dir` 这三个内部符号保持原名，
+因为 `calc_api.cpp` 与 `calc_log.cpp` 直接引用它们。
+
+```cpp
+#include "native_runtime.h"
+
+bm_runtime::settings_init();
+char buf[256] = {0};
+bm_runtime::settings_get("language", buf, sizeof(buf));   // 返回值是状态码，不是长度
+bm_runtime::settings_set("language", "zh");
+bm_runtime::settings_save();
+```
+
 ## 目录结构
 
 ```
@@ -51,7 +78,9 @@ BackendMathLibrary/
 │   ├── calc_unit.cpp        # 单位换算（8 类，一步换算）
 │   ├── calc_cmp.cpp         # 比较专区（数组输入/输出）
 │   ├── calc_log.cpp         # log.dll 绑定（日志 + 缓存），自写代码
-│   └── calc_native.cpp      # 模块目录解析 + config(tmmf) 设置 + lerf 双语，自写代码
+│   ├── native_runtime.h     # 可复用原生层（模块目录 / 依赖 DLL / TMMF 设置 / LERF），自写代码
+│   ├── native_runtime.cpp   #   同上实现，与本项目无关，可直接复制到其他项目
+│   └── calc_native.cpp      # 仅保留 cm_* 导出 + 语言状态 + 日志开关，自写代码
 ├── tests/                   # 断言测试（test_calc / test_engine / test_unit /
 │                            #   test_cmp / test_concurrency / test_settings / test_native）
 └── build/                   # 构建脚本（MSVC 命令行）
