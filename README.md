@@ -271,15 +271,15 @@ cm_cmp_free(c);
 | 附件 | 说明 |
 | --- | --- |
 | `CalcManager.dll` | 主库（纯 C ABI；v0.6 新增计算规律及答案接口） |
-| `CalcManager.lib` | 静态库（引擎部分，构建用） |
-| `CalcManager.exp` | 链接导出文件 |
+| `CalcManager.lib` | 引擎静态库（9 MB，构建 / 二次封装用） |
+| `CalcManager_dll.lib` | DLL 导入库（宿主程序链接 `CalcManager.dll` 用） |
 | `log.dll` | 日志 + 操作缓存（运行时依赖） |
 | `config.dll` | TMMF 设置持久化（运行时依赖） |
 | `tmmf.dll` | TMMF 格式支持（运行时依赖） |
 | `lerf.dll` | LERF 格式支持（运行时依赖） |
-| `en.lerf` | 英文语言文件（`resources\cmd\`） |
-| `zh.lerf` | 中文语言文件（`resources\cmd\`） |
-| `calc_memo.tmmf` | 计算规律及答案基线数据（`resources\cmd\`） |
+| `en.lerf` | 英文语言文件（放进 `resources\cmd\`） |
+| `zh.lerf` | 中文语言文件（放进 `resources\cmd\`） |
+| `calc_memo.tmmf` | 计算规律及答案基线数据（放进 `resources\cmd\`） |
 
 把这 10 个文件放到**同一个目录**（`en.lerf` / `zh.lerf` / `calc_memo.tmmf` 放进该目录下的
 `resources\cmd\`）即可直接使用，不需要任何路径配置。Release 页面同时附带 GitHub 自动生成的源码 zip/tar.gz。
