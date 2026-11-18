@@ -1,5 +1,5 @@
 LERF.utf8
-BackendMathLibrary.V0.4.0
+BackendMathLibrary.V0.6.0
 0
 <library.name>后端数学库<library.name>
 <library.description>带 C 接口的任意精度有理数数学核心<library.description>
@@ -22,4 +22,13 @@ BackendMathLibrary.V0.4.0
 <settings.output_format>输出格式<settings.output_format>
 <settings.language.english>英文<settings.language.english>
 <settings.language.chinese>中文<settings.language.chinese>
-<status.release>发布版 V0.4（预发行）<status.release>
+<status.release>发布版 V0.6（预发行）<status.release>
+<memo.name>计算规律及答案<memo.name>
+<memo.description>预先存好的常用算式与结果，命中时直接取用，不再重复计算<memo.description>
+<memo.baseline>随库分发的基线数据<memo.baseline>
+<memo.runtime>运行时累积的结果<memo.runtime>
+<memo.hit>答案直接取自计算规律及答案表，未做计算<memo.hit>
+<memo.miss>表中没有该算式，本次重新计算<memo.miss>
+<memo.saved>计算规律及答案表已写入 calc_memo.user.tmmf<memo.saved>
+<memo.missing>未找到计算规律及答案表，按空表运行<memo.missing>
+<settings.memo.autostore>自动记录常用结果<settings.memo.autostore>

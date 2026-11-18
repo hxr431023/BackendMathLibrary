@@ -59,6 +59,54 @@ bm_runtime::settings_set("language", "zh");
 bm_runtime::settings_save();
 ```
 
+## 计算规律及答案（v0.6）
+
+一张 **表达式 → 答案** 的表：常用算式的结果预先存好，命中时直接取用，不必再算一遍。
+数据文件与设置一样使用 **TMMF 格式**（`#MDRenderer Settings` 头 + `#` 注释 + `key=value` 行）。
+
+| 文件（均在 `resources\cmd\` 下） | 性质 | 是否入库 |
+| --- | --- | --- |
+| `calc_memo.tmmf` | **基线数据**，随源码分发，可直接编辑 | 是 |
+| `calc_memo.user.tmmf` | 运行时学到的答案，机器状态 | 否（`.gitignore` 排除） |
+
+键在读写前统一**归一化**：去掉所有空白、全角数字/字母转半角、`×` `÷` `−` 归一为 `*` `/` `-`、`π` 归一为 `pi`、
+字母转小写、末尾的 `=` 去掉。因此 `1 + 1`、`１＋１`、`1+1=` 都会命中同一条。
+
+| 接口 | 说明 |
+| --- | --- |
+| `cm_memo_init()` | 载入两张表，返回条目数（基线约 150 条）；可重复调用 |
+| `cm_memo_lookup(expr, out, size)` | 查表：1 = 命中（答案写入 `out`），0 = 未命中 |
+| `cm_memo_answer(expr)` | 同上，命中直接返回 UTF-8 答案指针，未命中返回 `NULL` |
+| `cm_memo_store(expr, answer)` | 写入运行时表（内存），超出 4096 条时淘汰最旧一条 |
+| `cm_memo_save()` | 把运行时表落盘为 `calc_memo.user.tmmf` |
+| `cm_memo_forget(expr)` / `cm_memo_clear_runtime()` | 删除单条 / 清空运行时表（基线不动） |
+| `cm_memo_normalize(expr, out, size)` | 取得该算式的规范键，便于界面展示或自建索引 |
+| `cm_memo_item(idx, ...)` / `cm_memo_count()` / `cm_memo_hits(expr)` | 枚举条目 / 总数 / 单条命中次数 |
+| `cm_memo_path(which)` | 表文件路径：0 = 基线，1 = 运行时 |
+| `cm_memo_set_auto_store(on)` / `cm_memo_get_auto_store()` | 是否在每次 `CM_CMD_EQU` 之后自动记录（默认开启） |
+| `cm_engine_memo_suggest(h, out, size)` | 打 `=` 之前先问一次表：1 = 已知答案，0 = 未知，照常计算 |
+
+自动记录走引擎的等号命令：`cm_engine_send_command(h, CM_CMD_EQU)` 算出结果后，
+表达式与答案会写入运行时表（`1+1` 这类"算式即答案"的输入会被跳过）。
+`suggest` 只读不改引擎状态，宿主可以据此省掉一次求值，也可以忽略它照常 `CM_CMD_EQU`。
+
+```c
+cm_memo_init();                                   // 载入基线 + 运行时表
+
+char out[256] = {0};
+if (cm_memo_lookup("10!", out, sizeof(out))) {    // 1 = 命中，答案 "3628800"
+    /* 直接用 out，不需要求值 */
+}
+
+cm_engine_send_command(h, CM_CMD_2);              // 输入 2 + 3 =
+cm_engine_send_command(h, CM_CMD_ADD);
+cm_engine_send_command(h, CM_CMD_3);
+cm_engine_send_command(h, CM_CMD_EQU);            // 算完自动记录 "2+3=5"
+cm_memo_save();                                   // 落盘到 calc_memo.user.tmmf
+
+cm_memo_lookup("2+3", out, sizeof(out));          // 下次直接命中 "5"
+```
+
 ## 目录结构
 
 ```
@@ -69,7 +117,9 @@ BackendMathLibrary/
 ├── log.dll / config.dll / tmmf.dll / lerf.dll   # 随源码提交的运行时依赖
 ├── resources/cmd/
 │   ├── en.lerf              # 英文语言文件
-│   └── zh.lerf              # 中文语言文件
+│   ├── zh.lerf              # 中文语言文件
+│   ├── calc_memo.tmmf       # 计算规律及答案：基线数据（随源码分发）
+│   └── calc_memo.user.tmmf  # 运行时学到的答案（机器状态，不入库）
 ├── src/CalcManager/         # 引擎源码（源自 Microsoft/calculator）
 ├── api/                     # 纯 C 封装层
 │   ├── calc_api.h           # 头文件（全部接口声明）
@@ -77,12 +127,14 @@ BackendMathLibrary/
 │   ├── calc_engine.cpp      # 计算引擎封装（科学/程序员模式，按运算符优先级）
 │   ├── calc_unit.cpp        # 单位换算（8 类，一步换算）
 │   ├── calc_cmp.cpp         # 比较专区（数组输入/输出）
+│   ├── calc_memo.h          # 计算规律及答案表（归一化 / 查表 / 学习 / 落盘），自写代码
+│   ├── calc_memo.cpp        #   同上实现，TMMF 双文件，自写代码
 │   ├── calc_log.cpp         # log.dll 绑定（日志 + 缓存），自写代码
 │   ├── native_runtime.h     # 可复用原生层（模块目录 / 依赖 DLL / TMMF 设置 / LERF），自写代码
 │   ├── native_runtime.cpp   #   同上实现，与本项目无关，可直接复制到其他项目
 │   └── calc_native.cpp      # 仅保留 cm_* 导出 + 语言状态 + 日志开关，自写代码
-├── tests/                   # 断言测试（test_calc / test_engine / test_unit /
-│                            #   test_cmp / test_concurrency / test_settings / test_native）
+├── tests/                   # 断言测试（test_calc / test_engine / test_unit / test_cmp /
+│                            #   test_concurrency / test_settings / test_native / test_memo）
 └── build/                   # 构建脚本（MSVC 命令行）
 ```
 
@@ -97,6 +149,8 @@ BackendMathLibrary/
 - **单位换算**：8 类（Length/Mass/Temperature/Speed/Area/Volume/Time/Data），`cm_unit_convert` 一步换算。
 - **比较专区**：`cm_cmp_compare`（无单位）/ `cm_cmp_compare_units`（带单位，统一到首项单位后比较），
   输入输出均为宽字符串数组，每项 `"key=value"`。
+- **计算规律及答案**：`cm_memo_lookup` / `cm_memo_store` / `cm_engine_memo_suggest`，
+  常用算式结果预先存表，命中即取用；详见下方专节。
 
 ### 运行时设置（TMMF）
 
@@ -187,27 +241,45 @@ cm_cmp_free(c);
   `cm_engine_*`、`cm_unit_*`、`cm_cmp_*` 各自持有句柄（每实例独立状态），同一实例勿在多个线程中并发使用。
 - **单位换算精度**：`cm_unit_convert` 与比较专区使用 **`double` 精度**（非任意精度）；
   极小的非零数值不会被抹零，比较判等采用容差（1e-9）。引擎算术运算本身为任意精度。
+- **计算规律及答案表**：`cm_memo_*` 内部用互斥锁保护两张表，可在多个线程并发查询/写入；
+  `cm_memo_answer` 返回的指针在**本线程下一次 `cm_memo_answer` 前**有效。
 - **返回指针生命周期**：
   - 数学接口返回的 `wchar_t*` 须用 `cm_free` 释放；
   - 引擎 / 单位查询返回的 `const wchar_t*`（类别名、单位名、单位缩写、`cm_unit_convert` 结果）
     在**下一次同类调用前**有效（句柄内单一共享缓冲）；
   - `cm_cmp_item` 的结果在**下一次比较前**有效；
-  - `cm_msg` / `cm_msg_w` / `cm_get_language` / `cm_module_dir` 返回的指针在**下一次同类调用前**有效。
+  - `cm_msg` / `cm_msg_w` / `cm_get_language` / `cm_module_dir` 返回的指针在**下一次同类调用前**有效；
+  - `cm_memo_answer` / `cm_memo_path` 返回的指针在本线程下一次同类调用前有效。
 
 ## 构建
 
 `build/` 下的脚本使用 MSVC 命令行工具链编译（`/O2 /std:c++20 /utf-8` 等），
 基于仓库根目录定位引擎源码（`src/CalcManager/CalcManager`）与封装源（`api/`），
 产物输出到 `build/out/`。`vcvars64.bat` 路径可用参数 `-VcVars <路径>` 指定，未指定时自动探测常见位置；
-构建完成后脚本会自动把 4 个依赖 DLL 与 `resources/cmd` 复制到 `build/out/`，产物目录可直接运行。
+构建完成后脚本会自动把 4 个依赖 DLL 与 `resources/cmd`（两份 LERF 语言文件 + `calc_memo.tmmf` 基线数据）
+复制到 `build/out/`，产物目录可直接运行。
 
 1. `build_lib_calcmgr.ps1`：编译引擎为静态库 `build/out/CalcManager.lib`
-2. `build_dll_calcmgr.ps1`：把 6 个封装源（含 `calc_log.cpp`、`calc_native.cpp`）链接为 `build/out/CalcManager.dll`
+2. `build_dll_calcmgr.ps1`：把 8 个封装源（含 `calc_log.cpp`、`calc_native.cpp`、`calc_memo.cpp`）链接为 `build/out/CalcManager.dll`
 3. `build_tests_calcmgr.ps1`：编译并运行 `tests/` 下的断言测试（按真实退出码判定，崩溃即失败）
 
 ## 下载
 
 预编译的 64 位产物随每个 [Release](https://github.com/hxr431023/BackendMathLibrary/releases) 发布，
-作为发布附件提供：`CalcManager.dll`、`CalcManager.lib`、`CalcManager.exp`，
-以及运行时依赖 `log.dll`、`config.dll`、`tmmf.dll`、`lerf.dll`。
-Release 页面同时附带 GitHub 自动生成的源码 zip/tar.gz。
+作为发布附件提供。v0.6 的附件共 10 个：
+
+| 附件 | 说明 |
+| --- | --- |
+| `CalcManager.dll` | 主库（纯 C ABI；v0.6 新增计算规律及答案接口） |
+| `CalcManager.lib` | 静态库（引擎部分，构建用） |
+| `CalcManager.exp` | 链接导出文件 |
+| `log.dll` | 日志 + 操作缓存（运行时依赖） |
+| `config.dll` | TMMF 设置持久化（运行时依赖） |
+| `tmmf.dll` | TMMF 格式支持（运行时依赖） |
+| `lerf.dll` | LERF 格式支持（运行时依赖） |
+| `en.lerf` | 英文语言文件（`resources\cmd\`） |
+| `zh.lerf` | 中文语言文件（`resources\cmd\`） |
+| `calc_memo.tmmf` | 计算规律及答案基线数据（`resources\cmd\`） |
+
+把这 10 个文件放到**同一个目录**（`en.lerf` / `zh.lerf` / `calc_memo.tmmf` 放进该目录下的
+`resources\cmd\`）即可直接使用，不需要任何路径配置。Release 页面同时附带 GitHub 自动生成的源码 zip/tar.gz。

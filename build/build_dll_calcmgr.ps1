@@ -48,6 +48,7 @@ $rsp = @"
 "$api\calc_engine.cpp"
 "$api\calc_unit.cpp"
 "$api\calc_cmp.cpp"
+"$api\calc_memo.cpp"
 "@
 $rsp = $rsp -replace "`n","`r`n"
 $rspPath = "$out\calc_api.rsp"
@@ -84,6 +85,9 @@ if (Test-Path -LiteralPath "$out\CalcManager.dll") {
         if (-not (Test-Path -LiteralPath $dst)) { New-Item -ItemType Directory -Path $dst -Force | Out-Null }
         Copy-Item -LiteralPath (Join-Path $res "en.lerf") -Destination $dst -Force -ErrorAction SilentlyContinue
         Copy-Item -LiteralPath (Join-Path $res "zh.lerf") -Destination $dst -Force -ErrorAction SilentlyContinue
+        # Baseline "计算规律及答案" data: read from the module directory at runtime,
+        # so it has to be shipped beside the DLL too.
+        Copy-Item -LiteralPath (Join-Path $res "calc_memo.tmmf") -Destination $dst -Force -ErrorAction SilentlyContinue
     }
     Write-Output "runtime copied to build\out"
 }

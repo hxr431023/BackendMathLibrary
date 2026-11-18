@@ -288,6 +288,68 @@ __declspec(dllimport) const char* cm_get_language(void);
 __declspec(dllimport) const char* cm_msg(const char* id);
 __declspec(dllimport) const wchar_t* cm_msg_w(const char* id);
 
+// ---- 计算规律及答案 / Calculation rules and answers (TMMF) ----
+// A table of expression -> answer pairs. A hit means the answer is already known
+// and does not have to be evaluated again.
+//
+// Backing files, both resolved beside CalcManager.dll:
+//   resources\cmd\calc_memo.tmmf       baseline data shipped with the source
+//   resources\cmd\calc_memo.user.tmmf  what this process learned (machine state)
+// Format: TMMF — `#MDRenderer Settings` header, `#` comments, `key=value` body;
+// keys are normalized expressions, `meta.*` lines describe the file itself.
+//
+// Keys are normalized before use: whitespace is dropped, full-width digits and
+// operators become ASCII, ×/÷/− become *, /, -, and letters are lowercased.
+// cm_memo_normalize exposes that same function so a host can display the key.
+
+#define CM_VERSION      "0.6"
+#define CM_MEMO_BASELINE "calc_memo.tmmf"
+#define CM_MEMO_RUNTIME  "calc_memo.user.tmmf"
+
+// Load both tables; returns the entry count. Safe to call repeatedly.
+__declspec(dllimport) int cm_memo_init(void);
+// Discard memory and read the files again.
+__declspec(dllimport) int cm_memo_reload(void);
+__declspec(dllimport) int cm_memo_count(void);
+
+// Lookup by expression (UTF-8, any spacing/width). Returns the reused answer, or
+// NULL on a miss. The pointer is valid until the next cm_memo_answer call.
+__declspec(dllimport) const char* cm_memo_answer(const char* expr);
+// Same lookup with a caller buffer: 1 = hit (answer copied into out), 0 = miss.
+__declspec(dllimport) int cm_memo_lookup(const char* expr, char* out, int size);
+
+// Record an answer (runtime table). 0 = stored (or already known).
+__declspec(dllimport) int cm_memo_store(const char* expr, const char* answer);
+// Drop one entry. 0 = removed.
+__declspec(dllimport) int cm_memo_forget(const char* expr);
+// Write the runtime table to calc_memo.user.tmmf. 0 = written.
+__declspec(dllimport) int cm_memo_save(void);
+// Empty the runtime table only; baseline entries stay.
+__declspec(dllimport) void cm_memo_clear_runtime(void);
+
+// Canonical key of an expression, written into out (UTF-8).
+__declspec(dllimport) int cm_memo_normalize(const char* expr, char* out, int size);
+// File path of the table: which = 0 baseline, 1 runtime.
+__declspec(dllimport) const char* cm_memo_path(int which);
+// Enumerate entries. idx starts at 0 over baseline, then continues into runtime.
+// Returns 1 when idx exists; buffer arguments may be NULL.
+__declspec(dllimport) int cm_memo_item(int idx, char* exprOut, int exprSize,
+                                       char* answerOut, int answerSize,
+                                       int* hits, int* runtime);
+// How many lookups this entry answered, or -1 when the expression is unknown.
+__declspec(dllimport) int cm_memo_hits(const char* expr);
+
+// While on (the default), every CM_CMD_EQU that produces a result is recorded
+// into the runtime table. Turn it off to keep the table read-only.
+__declspec(dllimport) void cm_memo_set_auto_store(int on);
+__declspec(dllimport) int cm_memo_get_auto_store(void);
+
+// Ask the table before sending CM_CMD_EQU: reads the engine's current expression,
+// normalizes it and looks it up. 1 = known answer copied into out (the host may
+// show it without evaluating), 0 = unknown, send CM_CMD_EQU as usual. The engine
+// state is not modified either way, so a host can also ignore the answer.
+__declspec(dllimport) int cm_engine_memo_suggest(void* h, char* out, int size);
+
 #ifdef __cplusplus
 }
 #endif

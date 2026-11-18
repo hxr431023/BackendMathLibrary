@@ -10,3 +10,7 @@ dist/
 
 # Settings file written by config.dll at runtime — machine state, not source
 resources/cmd/settings.tmmf
+
+# Answers learned at runtime by the calculation table — machine state, not source.
+# The baseline data (calc_memo.tmmf) IS source and is committed.
+resources/cmd/calc_memo.user.tmmf

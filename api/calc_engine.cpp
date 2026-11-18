@@ -9,15 +9,26 @@
 #include <array>
 #include <unordered_map>
 #include <cwchar>
+#include <cstring>
 #include <specstrings.h>
 
 #include "CalculatorManager.h"
 #include "CalculatorResource.h"
 #include "CalculatorHistory.h"
 #include "Header Files/RadixType.h"
+#include "native_runtime.h"
 
 using namespace std;
 using namespace CalculationManager;
+
+// ---- 计算规律及答案表 (calc_memo.cpp) ----
+// After an equals command the pair is recorded; a host can also ask the table
+// first through cm_engine_memo_suggest. Neither call changes engine state.
+extern "C" {
+    void calc_memo_after_equals(const wchar_t* expression, const wchar_t* result);
+    int  cm_memo_lookup(const char* expr, char* out, int size);
+    int  cm_memo_normalize(const char* expr, char* out, int size);
+}
 
 // ---------------------------------------------------------------------------
 // Resource text: operator symbols, digit labels, function names, error messages.
@@ -192,6 +203,44 @@ extern "C"
         CMEngine* e = static_cast<CMEngine*>(h);
         if (!e || !e->mgr) return;
         try { e->mgr->SendCommand(static_cast<Command>(command)); } catch (...) {}
+
+        // CM_CMD_EQU (121). The finished expression/result pair goes into the
+        // "计算规律及答案" table so the same input can be answered from it later.
+        if (command == 121 && e->display)
+        {
+            calc_memo_after_equals(e->display->expression.c_str(), e->display->display.c_str());
+        }
+    }
+
+    // 查表建议：读引擎当前表达式，命中则把已知答案写入 out（不改变引擎状态）。
+    // The expression token list ends at the last operator while the last operand
+    // is still only on the primary display, so "7 +" plus the display "9" is
+    // tried as well — that is what the completed key would look like.
+    __declspec(dllexport) int cm_engine_memo_suggest(void* h, char* out, int size)
+    {
+        CMEngine* e = static_cast<CMEngine*>(h);
+        if (!e || !e->display || !out || size <= 0) return 0;
+        out[0] = '\0';
+
+        std::string expr = bm_runtime::utf8_from_wide(e->display->expression.c_str());
+        std::string shown = bm_runtime::utf8_from_wide(e->display->display.c_str());
+        if (expr.empty() && shown.empty()) return 0;
+
+        if (!expr.empty() && cm_memo_lookup(expr.c_str(), out, size) == 1) return 1;
+
+        // Normalized key of the expression alone decides whether an operand is
+        // still pending.
+        char key[1024] = {0};
+        if (expr.empty()) return 0;
+        if (cm_memo_normalize(expr.c_str(), key, sizeof(key)) != 0 || key[0] == '\0') return 0;
+
+        char last = key[strlen(key) - 1];
+        bool pendingOperand = (last == '+' || last == '-' || last == '*' || last == '/'
+                              || last == '^' || last == '(' || last == ',' || last == '%');
+        if (!pendingOperand || shown.empty()) return 0;
+
+        std::string combined = expr + shown;
+        return cm_memo_lookup(combined.c_str(), out, size);
     }
 
     __declspec(dllexport) void cm_engine_set_scientific_mode(void* h)
